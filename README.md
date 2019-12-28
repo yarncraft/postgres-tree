@@ -1,5 +1,7 @@
 # Postgres Tree
 
+[![npm version](https://badge.fury.io/js/postgres-tree.svg)](https://badge.fury.io/js/postgres-tree)
+
 An implementation of flexible adjancency trees in Postgres
 
 In your root you must have the following environment variables in a .env
@@ -41,7 +43,7 @@ const PostgresTree = require("postgres-tree").default;
     offset: 0
   });
 
-  /* Insert a node and inherit its parents children */
+  /* insert a node and inherit its parents children */
   await tree.replaceInsertNode({
     id: 4,
     parent: 1,
