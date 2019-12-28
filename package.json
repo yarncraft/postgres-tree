@@ -1,0 +1,12 @@
+{
+  "name": "postgres-tree",
+  "version": "1.0.3",
+  "description": "An implementation of trees in Postgres",
+  "main": "index.js",
+  "author": "yarncraft",
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^8.2.0",
+    "pg": "^7.16.0"
+  }
+}
