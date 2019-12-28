@@ -4,7 +4,7 @@
 
 An implementation of flexible adjancency trees in Postgres
 
-In your root you must have the following environment variables in a .env
+In your root you must have the following environment variables in a .env \
 _This way node-postgres will set itself up automatically._
 
 ```env
