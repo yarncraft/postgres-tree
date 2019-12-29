@@ -2,6 +2,8 @@
 
 [![npm version](https://badge.fury.io/js/postgres-tree.svg)](https://badge.fury.io/js/postgres-tree)
 
+<a data-flickr-embed="true" href="https://www.flickr.com/photos/from_drawing/6322716054/in/photolist-aCHzcL-DPU3YJ-81mjzW-NZhnUL-rDUy3G-dv8HZA-e19geU-oCn8Fa-4oSDcd-RdK8W2-tyNyqo-dtTqbL-pFzCMg-breddn-CbAH2U-dpe8LG-3bnU7-5Z2dpD-oo9ZQk-CtaKr3-5DrQYY-bG5YVB-9pFqgG-a5CzhP-o3Jgwz-pq6cGg-7Mc1xt-4Lhe5a-7pb3gy-aMvFoi-CNzjgt-9JrLPy-7M4JhB-7KjC9q-7SC5Xg-9SkhAw-4jgLhB-97FKa2-jG1hH9-b7k7tc-q41mqn-mp6FSx-4gJbZf-9e5C7N-4KsG5Z-dwptEU-5Lf3QB-9VCXW5-62nymB-oovWDm" title="melt tree"><img src="https://live.staticflickr.com/6099/6322716054_ee5c442dda_w.jpg" width="186" height="240" alt="melt tree" align='right'></a>
+
 An implementation of flexible trees in Postgres
 
 In your root you must have the following environment variables in a .env \
