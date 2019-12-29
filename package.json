@@ -1,10 +1,19 @@
 {
   "name": "postgres-tree",
-  "version": "1.0.3",
-  "description": "An implementation of trees in Postgres",
+  "version": "1.1.0",
+  "description": "An implementation of flexible trees in Postgres",
   "main": "index.js",
   "author": "yarncraft",
   "license": "MIT",
+  "keywords": [
+    "postgres",
+    "pg",
+    "tree",
+    "trees",
+    "hierarchy",
+    "closuretables",
+    "graph"
+  ],
   "dependencies": {
     "dotenv": "^8.2.0",
     "pg": "^7.16.0"

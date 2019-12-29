@@ -2,10 +2,10 @@
 
 [![npm version](https://badge.fury.io/js/postgres-tree.svg)](https://badge.fury.io/js/postgres-tree)
 
-An implementation of flexible adjancency trees in Postgres
+An implementation of flexible trees in Postgres
 
 In your root you must have the following environment variables in a .env \
-_This way node-postgres will set itself up automatically._
+This way node-postgres will set itself up automatically.
 
 ```env
 PGUSER=testuser
@@ -15,13 +15,15 @@ PGDB=testuser
 PGPORT=5432
 ```
 
+Install the package with: `bash npm install postgres-tree`
+
 Next, you can work with the API as follows:
 
 ```javascript
 const PostgresTree = require("postgres-tree").default;
 
 (async () => {
-  /* construct the table in the DB and expose an API */
+  /* construct the table in the DB and expose an API (when the table already exists, skip the build) */
   const tree = await new PostgresTree("nodetree").build();
 
   await tree.addNode({
@@ -44,30 +46,95 @@ const PostgresTree = require("postgres-tree").default;
   });
 
   /* insert a node and inherit its parents children */
-  await tree.replaceInsertNode({
+  await tree.replacingInsertNode({
     id: 4,
     parent: 1,
     name: "Node4",
     offset: 0
   });
+  await tree.replacingInsertNode({
+    id: 5,
+    parent: 4,
+    name: "Node5",
+    offset: 0
+  });
 
   /* get all leaves of the tree */
   const leaves = await tree.getLeaves();
+  console.log(leaves);
+  /*
+  [
+    { id: 2, parent_id: 5, name: 'Node2', ofset: 0 },
+    { id: 3, parent_id: 5, name: 'Node3', ofset: 0 }
+  ]
+  */
+
+  /* get all leaves of the tree */
+  const roots = await tree.getRoots();
+  console.log(roots);
+  /*
+  [ { id: 1, name: 'Node1', ofset: 0 } ]
+  */
 
   /* get all descendants (= subtree) of a given node */
   const descendants = await tree.getDescendants(1);
+  console.log(descendants);
+  /*
+  [
+    { id: 4, parent_id: 1, name: 'Node4', ofset: 0, depth: 2 },
+    { id: 5, parent_id: 4, name: 'Node5', ofset: 0, depth: 3 },
+    { id: 2, parent_id: 5, name: 'Node2', ofset: 0, depth: 4 },
+    { id: 3, parent_id: 5, name: 'Node3', ofset: 0, depth: 4 }
+  ]
+  */
 
   /* get all ancestors of a given node */
   const ancestors = await tree.getAncestors(3);
+  console.log(ancestors);
+  /*
+  [
+    { id: 5, parent_id: 4, name: 'Node5', depth: -1 },
+    { id: 4, parent_id: 1, name: 'Node4', depth: -2 },
+    { id: 1, parent_id: null, name: 'Node1', depth: -3 }
+  ]
+  */
+
+  /* create a view of the ancestor relationships */
+  await tree.createView();
+
+  /* observe the view */
+  const view = await tree.view();
+  console.log(view);
+  /*
+  [
+    { id: 1, ancestors: [], depth: 0, cycle: false },
+    { id: 4, ancestors: [ 1 ], depth: 1, cycle: false },
+    { id: 5, ancestors: [ 1, 4 ], depth: 2, cycle: false },
+    { id: 2, ancestors: [ 1, 4, 5 ], depth: 3, cycle: false },
+    { id: 3, ancestors: [ 1, 4, 5 ], depth: 3, cycle: false }
+  ]
+  */
+
+  /* move the node and its descendants to a new parent node */
+  await tree.moveSubtree(3, 2);
+
+  /* move the children of a given node to a new parent node */
+  await tree.moveDescendants(2, 4);
 
   /* remove a node and transfer its children to its parent */
   await tree.removeNode(3);
 
   /* remove a node and its children */
-  await tree.removeSubtree(4);
+  await tree.removeSubtree(5);
 
-  /* create a view of the ancestor relationships */
-  const view = await tree.createView();
+  const newView = await tree.view();
+  console.log(newView);
+  /*
+  [
+    { id: 1, ancestors: [], depth: 0, cycle: false },
+    { id: 4, ancestors: [ 1 ], depth: 1, cycle: false }
+  ]
+  */
 
   /* remove the table and its view from the database*/
   await tree.destroy();
@@ -75,3 +142,5 @@ const PostgresTree = require("postgres-tree").default;
   console.error(err);
 });
 ```
+
+I've implemented the tree methods with Common Table Expressions (CTEs) and the classical Adjacency List / Closure Table approach. It serves as an alternative for the ltree datatype which Postgres natively supports.

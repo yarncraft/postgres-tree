@@ -24,7 +24,7 @@ export default class PostgresTree {
  id serial PRIMARY KEY NOT NULL,
  parent_id integer,
  name varchar NOT NULL,
- ofset integer,
+ ofset integer DEFAULT 0,
  FOREIGN KEY (parent_id) REFERENCES ${this.table}(id)
 );
   `
@@ -34,7 +34,6 @@ export default class PostgresTree {
 
   async destroy() {
     const text = `DROP TABLE IF EXISTS ${this.table} CASCADE`;
-
     const { rows } = await this.client.query(text);
     return !rows.length;
   }
@@ -53,7 +52,6 @@ UNION
 SELECT *
 FROM children;`;
     const values = [id];
-
     const { rows } = await this.client.query(text, values);
     return rows.slice(1);
   }
@@ -72,7 +70,6 @@ UNION
 SELECT *
 FROM parents;`;
     const values = [id];
-
     const { rows } = await this.client.query(text, values);
     return rows.slice(1);
   }
@@ -80,9 +77,22 @@ FROM parents;`;
   async addNode({ id, parent, name, offset }) {
     const text = `INSERT INTO ${this.table}(id, parent_id, name, ofset) VALUES($1, $2, $3, $4) RETURNING *`;
     const values = [id, parent, name, offset];
-
     const { rows } = await this.client.query(text, values);
     return rows[0];
+  }
+
+  async moveSubtree(nodeId, newParentId) {
+    const text = `UPDATE ${this.table} SET parent_id = $1 WHERE id = $2;`;
+    const values = [newParentId, nodeId];
+    const { rows } = await this.client.query(text, values);
+    return !rows.length;
+  }
+
+  async moveDescendants(nodeId, newParentId) {
+    const text = `UPDATE ${this.table} SET parent_id = $1 WHERE parent_id = $2;`;
+    const values = [newParentId, nodeId];
+    const { rows } = await this.client.query(text, values);
+    return !rows.length;
   }
 
   /**
@@ -106,17 +116,20 @@ WHERE ${this.table}.parent_id = deleted.id
 RETURNING *;
 `;
     const values = [id];
-
     const { rows } = await this.client.query(text, values);
     return rows;
   }
 
   async removeSubtree(id) {
-    const text = `DELETE FROM ${this.table} WHERE id = $1 RETURNING *;`;
-    const values = [id];
-
-    const { rows } = await this.client.query(text, values);
-    return rows;
+    this.createView();
+    const text = `
+DELETE FROM ${this.table}
+WHERE id IN (
+  SELECT id FROM ${this.table + "_view"} AS t WHERE ${id} = ANY(t.ancestors)
+) OR id = ${id};
+    `;
+    const { rows } = await this.client.query(text);
+    return !rows.length;
   }
 
   /**
@@ -140,10 +153,10 @@ SET parent_id = insert_node.id
 FROM insert_node
 WHERE ${this.table}.id = $5;`;
     const values = [id, x, name, offset, y];
-
     const { rows } = await this.client.query(text, values);
     return !rows.length;
   }
+
   /**
    * Insert a node and inherit its parents children
    *
@@ -163,37 +176,50 @@ SET parent_id = created_node.id
 FROM created_node
 WHERE ${this.table}.parent_id = $2;`;
     const values = [id, parent, name, offset];
-
     const { rows } = await this.client.query(text, values);
     return !rows.length;
   }
 
   async getLeaves() {
     const text = `
-SELECT id, name FROM ${this.table}
+SELECT id, parent_id, name, ofset FROM ${this.table}
 WHERE id NOT IN (
   SELECT parent_id FROM ${this.table} WHERE parent_id IS NOT NULL
 );
 `;
+    const { rows } = await this.client.query(text);
+    return rows;
+  }
 
+  async getRoots() {
+    const text = `SELECT id, name, ofset FROM ${this.table} WHERE parent_id IS NULL;`;
     const { rows } = await this.client.query(text);
     return rows;
   }
 
   async createView() {
     const text = `
-CREATE OR REPLACE RECURSIVE VIEW ${this.table + "_view"} (id, ancestors) AS (
-    SELECT id, '{}'::integer[]
+CREATE OR REPLACE RECURSIVE VIEW ${this.table +
+      "_view"} (id, ancestors, depth, cycle) AS (
+    SELECT id, '{}'::integer[], 0, FALSE
     FROM ${this.table} WHERE parent_id IS NULL
   UNION ALL
-    SELECT n.id, t.ancestors || n.parent_id
+    SELECT
+      n.id, t.ancestors || n.parent_id, t.depth + 1,
+      n.parent_id = ANY(t.ancestors)
     FROM ${this.table} n, ${this.table + "_view"} t
     WHERE n.parent_id = t.id
+    AND NOT t.cycle
 );
 `;
-
     await this.client.query(text);
+    const { rows } = await this.client.query(
+      `SELECT * FROM ${this.table + "_view"};`
+    );
+    return rows;
+  }
 
+  async view() {
     const { rows } = await this.client.query(
       `SELECT * FROM ${this.table + "_view"};`
     );
