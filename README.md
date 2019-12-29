@@ -15,7 +15,7 @@ PGDB=testuser
 PGPORT=5432
 ```
 
-Install the package with: `bash npm install postgres-tree`
+Install the package with: `npm install postgres-tree`
 
 Next, you can work with the API as follows:
 
