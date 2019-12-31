@@ -10,7 +10,7 @@ export default class PostgresTree {
       password: process.env.PGPASS,
       port: process.env.PGPORT
     });
-    this.table = table; // Beware of SQL Injections when exposing this to the end users
+    this.table = table;
   }
 
   client() {
@@ -41,7 +41,7 @@ export default class PostgresTree {
   async getDescendants(id) {
     const text = `
 WITH RECURSIVE children AS (
- SELECT id, parent_id, name, ofset, 1 as depth
+ SELECT id, parent_id, name, ofset, ofset as depth
  FROM ${this.table}
  WHERE id = $1
 UNION
@@ -80,7 +80,14 @@ FROM parents;`;
     const { rows } = await this.client.query(text, values);
     return rows[0];
   }
-
+  /**
+   *
+   *
+   * @param {*} nodeId
+   * @param {*} newParentId
+   * @returns
+   * @memberof PostgresTree
+   */
   async moveSubtree(nodeId, newParentId) {
     const text = `UPDATE ${this.table} SET parent_id = $1 WHERE id = $2;`;
     const values = [newParentId, nodeId];
@@ -205,7 +212,7 @@ CREATE OR REPLACE RECURSIVE VIEW ${this.table +
     FROM ${this.table} WHERE parent_id IS NULL
   UNION ALL
     SELECT
-      n.id, t.ancestors || n.parent_id, t.depth + 1,
+      n.id, t.ancestors || n.parent_id, t.depth + 1 + n.ofset,
       n.parent_id = ANY(t.ancestors)
     FROM ${this.table} n, ${this.table + "_view"} t
     WHERE n.parent_id = t.id
@@ -214,14 +221,14 @@ CREATE OR REPLACE RECURSIVE VIEW ${this.table +
 `;
     await this.client.query(text);
     const { rows } = await this.client.query(
-      `SELECT * FROM ${this.table + "_view"};`
+      `SELECT id, ancestors, depth FROM ${this.table + "_view"};`
     );
     return rows;
   }
 
   async view() {
     const { rows } = await this.client.query(
-      `SELECT * FROM ${this.table + "_view"};`
+      `SELECT id, ancestors, depth FROM ${this.table + "_view"};`
     );
     return rows;
   }
